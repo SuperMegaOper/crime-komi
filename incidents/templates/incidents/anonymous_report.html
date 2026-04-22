@@ -1,0 +1,10 @@
+{% extends 'incidents/base.html' %}
+{% block content %}
+<h2>Анонимное обращение</h2>
+<p>Вы можете сообщить о преступлении или подозрительном факте, не указывая свои данные.</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-warning">Отправить анонимно</button>
+</form>
+{% endblock %}

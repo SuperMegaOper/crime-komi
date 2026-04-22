@@ -1,0 +1,32 @@
+{% extends 'incidents/base.html' %}
+{% block sidebar %}
+<div class="sidebar">
+    <div class="card-panel">
+        <h3><i class="fas fa-user-plus"></i> Регистрация</h3>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Имя пользователя</label>
+                {{ form.username }}
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                {{ form.email }}
+            </div>
+            <div class="form-group">
+                <label>Пароль</label>
+                {{ form.password1 }}
+            </div>
+            <div class="form-group">
+                <label>Подтверждение пароля</label>
+                {{ form.password2 }}
+            </div>
+            <button type="submit" class="submit-btn">Зарегистрироваться</button>
+        </form>
+        <div class="anonymous-note">Уже есть аккаунт? <a href="{% url 'login' %}">Войдите</a></div>
+    </div>
+</div>
+{% endblock %}
+{% block map %}
+<div id="map" style="height: 100%; background: #1a1e2a;"></div>
+{% endblock %}

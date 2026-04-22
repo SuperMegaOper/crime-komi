@@ -1,0 +1,487 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Криминал Коми | Карта происшествий</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'incidents/css/style.css' %}">
+    <style>
+        .navbar {
+            background: rgba(10, 12, 18, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #2a2e3c;
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .nav-links a {
+            color: #eef2ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .nav-links a:hover {
+            color: #e74c3c;
+        }
+        .btn-outline {
+            border: 1px solid #e74c3c;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+        }
+        .btn-outline:hover {
+            background: #e74c3c;
+            color: white;
+        }
+        .logo h1 {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    
+    <style>
+        .modal-content {
+            background: #1a1e2a;
+            color: #eef2ff;
+            border: 1px solid #2a2e3c;
+        }
+        .modal-header {
+            border-bottom-color: #2a2e3c;
+        }
+        .modal-footer {
+            border-top-color: #2a2e3c;
+        }
+        .modal .form-group {
+            margin-bottom: 15px;
+        }
+        .modal input, .modal select, .modal textarea {
+            background: #0a0e16;
+            border: 1px solid #2f3545;
+            color: white;
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 16px;
+        }
+        .modal .submit-btn {
+            background: #c0392b;
+            width: 100%;
+            border: none;
+            padding: 10px;
+            border-radius: 40px;
+            color: white;
+            cursor: pointer;
+        }
+        .modal a {
+            color: #e74c3c;
+            text-decoration: none;
+        }
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+    </style>
+
+</style>
+
+<style id="modal-custom-styles">
+    /* Общие стили для модальных окон */
+    .modal-content {
+        background: #1a1e2a;
+        color: #eef2ff;
+        border-radius: 16px;
+        border: 1px solid #2a2e3c;
+    }
+    .modal-header {
+        border-bottom: 1px solid #2a2e3c;
+        padding: 1rem 1.5rem;
+    }
+    .modal-header .btn-close {
+        filter: invert(1);
+    }
+    .modal-footer {
+        border-top: 1px solid #2a2e3c;
+        padding: 1rem 1.5rem;
+    }
+    .modal .form-group {
+        margin-bottom: 1rem;
+    }
+    .modal label {
+        display: block;
+        margin-bottom: 0.3rem;
+        font-size: 0.85rem;
+        color: #b9c4e6;
+    }
+    .modal input, .modal select, .modal textarea {
+        width: 100%;
+        background: #0a0e16;
+        border: 1px solid #2f3545;
+        border-radius: 12px;
+        padding: 8px 12px;
+        color: white;
+        font-size: 0.9rem;
+    }
+    .modal input:focus, .modal select:focus, .modal textarea:focus {
+        outline: none;
+        border-color: #e74c3c;
+    }
+    .modal .submit-btn {
+        background: #c0392b;
+        border: none;
+        border-radius: 40px;
+        padding: 10px;
+        width: 100%;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .modal .submit-btn:hover {
+        background: #a82315;
+    }
+    .modal .anonymous-note {
+        text-align: center;
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        color: #8f9bb5;
+    }
+    .modal .anonymous-note a {
+        color: #e74c3c;
+        text-decoration: none;
+    }
+    .modal .error-message {
+        color: #e74c3c;
+        font-size: 0.8rem;
+        margin-top: 5px;
+    }
+    .modal .btn-secondary {
+        background: #2c3548;
+        border: none;
+        color: white;
+    }
+    .modal .btn-secondary:hover {
+        background: #3a4258;
+    }
+</style>
+
+</head>
+<body>
+<div class="app">
+    <div class="navbar">
+        <div class="logo">
+            <h1><i class="fas fa-shield-haltered"></i> Криминал Коми</h1>
+            <p style="font-size:0.7rem; margin-top:2px;">Карта происшествий • на основе данных МВД</p>
+        </div>
+        <div class="nav-links">
+
+    {% if user.is_staff %}
+    <a href="{% url 'moderation' %}" id="notificationBell" style="position: relative; margin-right: 15px;">
+        <i class="fas fa-bell" style="font-size: 1.2rem;"></i>
+        <span id="notificationBadge" style="position: absolute; top: -8px; right: -10px; background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem;">0</span>
+    </a>
+    {% endif %}
+
+                <a href="{% url 'map' %}"><i class="fas fa-map"></i> Карта</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'add_incident' %}"><i class="fas fa-plus-circle"></i> Добавить отметку</a>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#profileModal"><i class="fas fa-user-circle"></i> {{ user.username }}</a>
+                    <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" style="background: none; border: none; color: #eef2ff; cursor: pointer;">
+                        <i class="fas fa-sign-out-alt"></i> Выйти
+                    </button>
+                <div class="anonymous-note"><a href="/password-reset/" data-bs-dismiss="modal" target="_blank">Забыли пароль?</a></div>
+</form>
+                {% else %}
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal"><i class="fas fa-sign-in-alt"></i> Вход</a>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal"><i class="fas fa-user-plus"></i> Регистрация</a>
+                {% endif %}
+</div>
+    </div>
+    <div class="main-layout">
+        {% block sidebar %}{% endblock %}
+        <div class="map-container">
+            {% block map %}{% endblock %}
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'incidents/js/map.js' %}"></script>
+{% block extra_js %}{% endblock %}
+
+<!-- Модальное окно профиля -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: #1a1e2a; color: #eef2ff;">
+      <div class="modal-header" style="border-bottom-color: #2a2e3c;">
+        <h5 class="modal-title" id="profileModalLabel"><i class="fas fa-user-circle"></i> Профиль пользователя</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="profileModalBody">
+        <div class="text-center mb-3">
+            <div id="profileAvatar" style="width: 80px; height: 80px; background: #c0392b; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 40px; color: white;">
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+        <div class="mb-2"><strong><i class="fas fa-user"></i> Имя:</strong> <span id="profileUsername"></span></div>
+        <div class="mb-2"><strong><i class="fas fa-envelope"></i> Email:</strong> <span id="profileEmail"></span></div>
+        <div class="mb-2"><strong><i class="fas fa-star" style="color: #f1c40f;"></i> Рейтинг:</strong> <span id="profileRating"></span></div>
+        <div class="mb-2"><strong><i class="fas fa-chart-line"></i> Публикаций:</strong> <span id="profileIncidentCount"></span></div>
+        <div class="mb-2"><strong><i class="fas fa-calendar-alt"></i> Дата регистрации:</strong> <span id="profileDateJoined"></span></div>
+        <div class="mb-2"><strong><i class="fas fa-info-circle"></i> О себе:</strong> <span id="profileBio">-</span></div>
+      </div>
+      <div class="modal-footer" style="border-top-color: #2a2e3c;">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    // Функция загрузки данных профиля
+    function loadProfileData() {
+        fetch('/profile/data/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('profileUsername').innerText = data.username;
+                document.getElementById('profileEmail').innerText = data.email || 'не указан';
+                document.getElementById('profileRating').innerText = data.rating;
+                document.getElementById('profileIncidentCount').innerText = data.incident_count;
+                document.getElementById('profileDateJoined').innerText = data.date_joined;
+                document.getElementById('profileBio').innerText = data.bio || 'не заполнено';
+                if (data.avatar) {
+                    const img = document.createElement('img');
+                    img.src = data.avatar;
+                    img.style.width = '80px';
+                    img.style.height = '80px';
+                    img.style.borderRadius = '50%';
+                    const avatarDiv = document.getElementById('profileAvatar');
+                    avatarDiv.innerHTML = '';
+                    avatarDiv.appendChild(img);
+                }
+            })
+            .catch(error => console.error('Ошибка загрузки профиля:', error));
+    }
+
+    // При открытии модального окна загружаем данные
+    const profileModal = document.getElementById('profileModal');
+    if (profileModal) {
+        profileModal.addEventListener('show.bs.modal', function () {
+            loadProfileData();
+        });
+    }
+</script>
+
+
+<!-- Модальное окно входа -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="loginModalLabel"><i class="fas fa-sign-in-alt"></i> Вход</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="ajaxLoginForm">
+          <div class="form-group">
+            <label>Имя пользователя</label>
+            <input type="text" id="loginUsername" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Пароль</label>
+            <input type="password" id="loginPassword" class="form-control" required>
+          </div>
+          <div id="loginError" class="error-message"></div>
+          <button type="submit" class="submit-btn">Войти</button>
+        <div class="anonymous-note"><a href="/password-reset/" data-bs-dismiss="modal" target="_blank">Забыли пароль?</a></div>
+</form>
+        <div class="anonymous-note" style="margin-top: 15px;">Нет аккаунта? <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal" data-bs-dismiss="modal">Зарегистрируйтесь</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно регистрации -->
+<div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="registerModalLabel"><i class="fas fa-user-plus"></i> Регистрация</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="ajaxRegisterForm">
+          <div class="form-group">
+            <label>Имя пользователя</label>
+            <input type="text" id="regUsername" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="regEmail" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Пароль</label>
+            <input type="password" id="regPassword" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Подтверждение пароля</label>
+            <input type="password" id="regPassword2" class="form-control" required>
+          </div>
+          <div id="regError" class="error-message"></div>
+          <button type="submit" class="submit-btn">Зарегистрироваться</button>
+        <div class="anonymous-note"><a href="/password-reset/" data-bs-dismiss="modal" target="_blank">Забыли пароль?</a></div>
+</form>
+        <div class="anonymous-note" style="margin-top: 15px;">Уже есть аккаунт? <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="modal">Войдите</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+    // AJAX-вход
+    $('#ajaxLoginForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/ajax/login/',
+            method: 'POST',
+            data: {
+                username: $('#loginUsername').val(),
+                password: $('#loginPassword').val(),
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    $('#loginError').text(data.error);
+                }
+            }
+        });
+    });
+    // AJAX-регистрация
+    $('#ajaxRegisterForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/ajax/register/',
+            method: 'POST',
+            data: {
+                username: $('#regUsername').val(),
+                email: $('#regEmail').val(),
+                password: $('#regPassword').val(),
+                password2: $('#regPassword2').val(),
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    $('#regError').text(data.error);
+                }
+            }
+        });
+    });
+    // Загрузка профиля при открытии
+    $('#profileModal').on('show.bs.modal', function() {
+        $.get('/profile/data/', function(data) {
+            $('#profileUsername').text(data.username);
+            $('#profileEmail').text(data.email || 'не указан');
+            $('#profileRating').text(data.rating);
+            $('#profileIncidentCount').text(data.incident_count);
+            $('#profileDateJoined').text(data.date_joined);
+            $('#profileBio').text(data.bio || 'не заполнено');
+            if (data.avatar) {
+                $('#profileAvatar').html('<img src="' + data.avatar + '" style="width:80px;height:80px;border-radius:50%;">');
+            }
+        });
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    $('#ajaxLoginForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/ajax/login/',
+            method: 'POST',
+            data: {
+                username: $('#loginUsername').val(),
+                password: $('#loginPassword').val(),
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(data) {
+                if (data.success) location.reload();
+                else $('#loginError').text(data.error);
+            }
+        });
+    });
+    $('#ajaxRegisterForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/ajax/register/',
+            method: 'POST',
+            data: {
+                username: $('#regUsername').val(),
+                email: $('#regEmail').val(),
+                password: $('#regPassword').val(),
+                password2: $('#regPassword2').val(),
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(data) {
+                if (data.success) location.reload();
+                else $('#regError').text(data.error);
+            }
+        });
+    });
+});
+</script>
+
+<script>
+    // Устанавливаем CSRF-токен для всех AJAX-запросов
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", $('meta[name="csrf-token"]').attr('content'));
+            }
+        }
+    });
+</script>
+
+
+<script>
+function updateNotificationCount() {
+    $.get('/api/pending-count/', function(data) {
+        $('#notificationBadge').text(data.count);
+        if (data.count > 0) {
+            $('#notificationBadge').css('background', '#e74c3c');
+        } else {
+            $('#notificationBadge').css('background', '#2c3e50');
+        }
+    });
+}
+$(document).ready(function() {
+    updateNotificationCount();
+    setInterval(updateNotificationCount, 30000); // обновлять каждые 30 секунд
+});
+</script>
+
+</body>
+</html>

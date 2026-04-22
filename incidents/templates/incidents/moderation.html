@@ -1,0 +1,41 @@
+{% extends 'incidents/base.html' %}
+{% block sidebar %}
+<div class="sidebar">
+    <div class="card-panel">
+        <h3><i class="fas fa-gavel"></i> Модерация происшествий</h3>
+        {% if incidents %}
+            {% for inc in incidents %}
+            <div class="incident-item" style="margin-bottom: 15px; border-left-color: #e74c3c;">
+                <div><strong>{{ inc.title }}</strong> ({{ inc.category }})</div>
+                <div class="incident-place">{{ inc.place }} • {{ inc.date_occurred }}</div>
+                <div>{{ inc.description|truncatechars:100 }}</div>
+                <div style="margin-top: 8px;">
+                    <button class="btn-confirm" data-id="{{ inc.id }}" data-action="confirm" style="background:#27ae60; color:white; border:none; padding:4px 12px; border-radius:20px;">✓ Подтвердить</button>
+                    <button class="btn-reject" data-id="{{ inc.id }}" data-action="reject" style="background:#c0392b; color:white; border:none; padding:4px 12px; border-radius:20px;">✗ Отклонить</button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>Нет новых происшествий для модерации.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+{% block map %}<div id="map" style="height:100%; background:#1a1e2a;"></div>{% endblock %}
+{% block extra_js %}
+<script>
+    $('.btn-confirm, .btn-reject').click(function() {
+        var btn = $(this);
+        var incidentId = btn.data('id');
+        var action = btn.data('action');
+        $.post('/moderation/', {incident_id: incidentId, action: action, csrfmiddlewaretoken: '{{ csrf_token }}'}, function(data) {
+            if (data.success) {
+                btn.closest('.incident-item').remove();
+                if ($('.incident-item').length === 0) {
+                    location.reload();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

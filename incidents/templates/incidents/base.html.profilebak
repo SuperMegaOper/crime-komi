@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Криминал Коми | Карта происшествий</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'incidents/css/style.css' %}">
+    <style>
+        .navbar {
+            background: rgba(10, 12, 18, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #2a2e3c;
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .nav-links a {
+            color: #eef2ff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .nav-links a:hover {
+            color: #e74c3c;
+        }
+        .btn-outline {
+            border: 1px solid #e74c3c;
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+        }
+        .btn-outline:hover {
+            background: #e74c3c;
+            color: white;
+        }
+        .logo h1 {
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="navbar">
+        <div class="logo">
+            <h1><i class="fas fa-skull-crossbones"></i> Криминал Коми</h1>
+            <p style="font-size:0.7rem; margin-top:2px;">Карта происшествий • на основе данных МВД</p>
+        </div>
+        <div class="nav-links">
+            <a href="{% url 'map' %}"><i class="fas fa-map"></i> Карта</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'add_incident' %}"><i class="fas fa-plus-circle"></i> Добавить отметку</a>
+                <a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Выйти ({{ user.username }})</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn-outline"><i class="fas fa-sign-in-alt"></i> Вход</a>
+                <a href="{% url 'register' %}" class="btn-outline"><i class="fas fa-user-plus"></i> Регистрация</a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="main-layout">
+        {% block sidebar %}{% endblock %}
+        <div class="map-container">
+            {% block map %}{% endblock %}
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'incidents/js/map.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
