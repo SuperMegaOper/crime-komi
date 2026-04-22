@@ -194,3 +194,87 @@ input, select, textarea {
         margin: 0.5rem;
     }
 }
+
+/* Мобильная адаптация карты */
+@media (max-width: 768px) {
+    .map-container {
+        height: 50vh !important;
+        min-height: 300px;
+    }
+    #map {
+        height: 100% !important;
+        width: 100% !important;
+    }
+    .sidebar {
+        max-height: 45vh;
+        overflow-y: auto;
+    }
+    .leaflet-control-zoom {
+        bottom: 10px;
+        top: auto;
+    }
+}
+@media (max-width: 480px) {
+    .map-container {
+        height: 40vh !important;
+    }
+    .sidebar {
+        max-height: 50vh;
+    }
+}
+
+/* Мобильная версия: карта скрыта, появляется по кнопке */
+@media (max-width: 768px) {
+    .map-container {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1050;
+        background: rgba(0,0,0,0.9);
+    }
+    .map-container.active {
+        display: block;
+    }
+    #map {
+        height: 90%;
+        margin-top: 10px;
+    }
+    .close-map-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1060;
+        background: #c0392b;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 5px 12px;
+        cursor: pointer;
+    }
+    .show-map-btn {
+        display: block;
+        width: 100%;
+        background: #c0392b;
+        color: white;
+        border: none;
+        border-radius: 40px;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+}
+@media (min-width: 769px) {
+    .show-map-btn {
+        display: none;
+    }
+    .close-map-btn {
+        display: none;
+    }
+    .map-container {
+        display: block !important;
+    }
+}

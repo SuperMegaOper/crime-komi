@@ -207,8 +207,7 @@
     </div>
     <div class="main-layout">
         {% block sidebar %}{% endblock %}
-        <button class="show-map-btn" id="showMapBtn">📱 Показать карту</button>
-<div class="map-container">
+        <div class="map-container">
             {% block map %}{% endblock %}
         </div>
     </div>
@@ -458,28 +457,5 @@ function updateNotificationCount() {
         updateNotificationCount();
         notificationInterval = setInterval(updateNotificationCount, 30000);
     });
-
-<script>
-    (function() {
-        var mapContainer = document.querySelector('.map-container');
-        var showBtn = document.getElementById('showMapBtn');
-        var closeBtn = document.getElementById('closeMapBtn');
-        if (showBtn) {
-            showBtn.addEventListener('click', function() {
-                mapContainer.classList.add('active');
-                // принудительно обновляем размер карты, если она уже инициализирована
-                if (window.map) {
-                    setTimeout(function() { window.map.invalidateSize(); }, 100);
-                }
-            });
-        }
-        if (closeBtn) {
-            closeBtn.addEventListener('click', function() {
-                mapContainer.classList.remove('active');
-            });
-        }
-    })();
-</script>
-
 </body>
 </html>
