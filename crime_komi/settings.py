@@ -11,11 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-dev')
 
 DEBUG = True
 
-<<<<<<< HEAD
 ALLOWED_HOSTS = ['crime-komi-production.up.railway.app', 'localhost', '127.0.0.1']
-=======
-ALLOWED_HOSTS = ['crime-komi-production.up.railway.app', 'localhost', '127.0.0.1']
->>>>>>> 9aea3ddadb5000e1052f30a5add167a0c33219e9
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -104,15 +100,4 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # WhiteNoise static files storage
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-<<<<<<< HEAD
-# Доверенные источники для CSRF (для Railway)
-# Доверенные источники для CSRF (для Railway)
 CSRF_TRUSTED_ORIGINS = ['https://crime-komi-production.up.railway.app']
-
-# Для HTTPS на Railway
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-=======
-CSRF_TRUSTED_ORIGINS = ['https://crime-komi-production.up.railway.app']
->>>>>>> 9aea3ddadb5000e1052f30a5add167a0c33219e9
