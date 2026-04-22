@@ -7,92 +7,71 @@ CSS_PATH = Path("incidents/static/incidents/css/style.css")
 def backup_file(path):
     if path.exists():
         import shutil
-        bak = path.with_suffix(path.suffix + ".togglebak")
+        bak = path.with_suffix(path.suffix + ".movebtn")
         shutil.copy2(path, bak)
         print(f"Резервная копия: {bak.name}")
 
-# 1. Обновляем base.html: одна кнопка-переключатель
+# 1. Перемещаем кнопку карты в конец сайдбара
 if BASE_HTML.exists():
     backup_file(BASE_HTML)
     with open(BASE_HTML, "r", encoding="utf-8") as f:
         content = f.read()
     
-    # Удаляем все старые кнопки (show и close)
-    content = re.sub(r'<button class="show-map-btn".*?</button>', '', content, flags=re.DOTALL)
-    content = re.sub(r'<button class="close-map-btn".*?</button>', '', content, flags=re.DOTALL)
-    
-    # Добавляем одну кнопку-переключатель в нужное место (перед map-container)
-    toggle_button = '<button class="toggle-map-btn" id="toggleMapBtn">📱 Показать карту</button>\n'
-    if '<div class="map-container">' in content:
-        content = content.replace('<div class="map-container">', toggle_button + '<div class="map-container">')
-    
-    # Добавляем новый скрипт для toggle
-    script = '''
-<script>
-    (function() {
-        var mapContainer = document.querySelector('.map-container');
-        var toggleBtn = document.getElementById('toggleMapBtn');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', function() {
-                if (mapContainer.classList.contains('active')) {
-                    mapContainer.classList.remove('active');
-                    toggleBtn.innerHTML = "📱 Показать карту";
-                } else {
-                    mapContainer.classList.add('active');
-                    toggleBtn.innerHTML = "✕ Закрыть карту";
-                    if (window.map) { setTimeout(function() { window.map.invalidateSize(); }, 100); }
-                }
-            });
-        }
-    })();
-</script>
-'''
-    if '</body>' in content:
-        content = content.replace('</body>', script + '\n</body>')
+    # Находим кнопку и перемещаем её в самый конец .sidebar
+    # Ищем div с классом sidebar
+    sidebar_pattern = r'(<div class="sidebar">)(.*?)(</div>)'
+    match = re.search(sidebar_pattern, content, re.DOTALL)
+    if match:
+        sidebar_open = match.group(1)
+        sidebar_content = match.group(2)
+        sidebar_close = match.group(3)
+        # Ищем кнопку в sidebar_content
+        button_pattern = r'(<button class="toggle-map-btn".*?</button>)'
+        button_match = re.search(button_pattern, sidebar_content, re.DOTALL)
+        if button_match:
+            button = button_match.group(1)
+            # Удаляем кнопку из текущего места и добавляем в конец
+            sidebar_content = re.sub(button_pattern, '', sidebar_content, flags=re.DOTALL)
+            # Добавляем в конец
+            sidebar_content += '\n' + button
+            new_sidebar = sidebar_open + sidebar_content + sidebar_close
+            content = re.sub(sidebar_pattern, new_sidebar, content, flags=re.DOTALL)
+            print("✅ Кнопка карты перемещена в конец сайдбара")
+        else:
+            print("⚠️ Кнопка не найдена")
+    else:
+        print("❌ Не найден .sidebar")
     
     with open(BASE_HTML, "w", encoding="utf-8") as f:
         f.write(content)
-    print("✅ base.html обновлён: одна кнопка-переключатель")
 
-# 2. Обновляем CSS: убираем лишние стили для close-btn, добавляем для toggle
-if CSS_PATH.exists():
-    backup_file(CSS_PATH)
-    with open(CSS_PATH, "r", encoding="utf-8") as f:
-        css = f.read()
-    
-    # Удаляем стили для .close-map-btn, добавим .toggle-map-btn
-    css = re.sub(r'\.close-map-btn\s*\{[^}]*\}', '', css, flags=re.DOTALL)
-    # Добавим стили для toggle кнопки
-    toggle_css = """
-.toggle-map-btn {
-    display: block;
-    width: 100%;
-    background: #c0392b;
-    color: white;
-    border: none;
-    border-radius: 40px;
-    padding: 10px;
-    margin-top: 10px;
-    font-size: 1rem;
-    cursor: pointer;
-}
-@media (min-width: 769px) {
-    .toggle-map-btn {
-        display: none;
-    }
-}
-"""
-    if '.toggle-map-btn' not in css:
-        css += toggle_css
+# 2. Добавим в админ-панель улучшенное отображение анонимных сообщений
+admin_path = Path("incidents/admin.py")
+if admin_path.exists():
+    backup_file(admin_path)
+    with open(admin_path, "r", encoding="utf-8") as f:
+        admin_content = f.read()
+    # Проверяем, есть ли уже настройка для AnonymousReport
+    if 'class AnonymousReportAdmin' not in admin_content:
+        # Добавляем улучшенный admin
+        new_admin = '''
+@admin.register(AnonymousReport)
+class AnonymousReportAdmin(admin.ModelAdmin):
+    list_display = ('subject', 'created_at', 'location')
+    list_filter = ('created_at',)
+    search_fields = ('subject', 'message', 'location')
+    readonly_fields = ('subject', 'message', 'location', 'created_at')
+    ordering = ('-created_at',)
+'''
+        # Вставляем перед последней строкой или в конец
+        admin_content += new_admin
+        with open(admin_path, "w", encoding="utf-8") as f:
+            f.write(admin_content)
+        print("✅ Админ-панель для анонимных сообщений улучшена")
     else:
-        css = re.sub(r'\.toggle-map-btn\s*\{[^}]*\}', toggle_css, css, flags=re.DOTALL)
-    
-    with open(CSS_PATH, "w", encoding="utf-8") as f:
-        f.write(css)
-    print("✅ CSS обновлён: одна кнопка-переключатель")
+        print("⚠️ Админ-панель уже настроена")
+else:
+    print("❌ admin.py не найден")
 
-print("\n🎉 Готово! Теперь карта открывается и закрывается одной кнопкой.")
-print("Выполните команды для отправки на GitHub:")
-print("git add .")
-print('git commit -m "Toggle map button: one button shows/hides map"')
-print("git push origin main --force-with-lease")
+print("\n🎉 Готово! Теперь кнопка карты внизу.")
+print("Выполните git add . && git commit -m 'Move map button to bottom' && git push origin main --force-with-lease")
