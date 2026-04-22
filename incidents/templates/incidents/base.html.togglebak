@@ -207,9 +207,8 @@
     </div>
     <div class="main-layout">
         {% block sidebar %}{% endblock %}
-        
-
-<button class="toggle-map-btn" id="toggleMapBtn">📱 Показать карту</button>
+        <button class="show-map-btn" id="showMapBtn">📱 Показать карту</button>
+<button class="show-map-btn" id="showMapBtn">📱 Показать карту</button>
 <div class="map-container">
             {% block map %}{% endblock %}
         </div>
@@ -501,26 +500,6 @@ function updateNotificationCount() {
         if (closeBtn) {
             closeBtn.addEventListener('click', function() {
                 mapContainer.classList.remove('active');
-            });
-        }
-    })();
-</script>
-
-
-<script>
-    (function() {
-        var mapContainer = document.querySelector('.map-container');
-        var toggleBtn = document.getElementById('toggleMapBtn');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', function() {
-                if (mapContainer.classList.contains('active')) {
-                    mapContainer.classList.remove('active');
-                    toggleBtn.innerHTML = "📱 Показать карту";
-                } else {
-                    mapContainer.classList.add('active');
-                    toggleBtn.innerHTML = "✕ Закрыть карту";
-                    if (window.map) { setTimeout(function() { window.map.invalidateSize(); }, 100); }
-                }
             });
         }
     })();

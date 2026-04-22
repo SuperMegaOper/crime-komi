@@ -1,80 +1,98 @@
-import os
-import shutil
+import re
 from pathlib import Path
 
-PROJECT_DIR = Path(__file__).parent.absolute()
+BASE_HTML = Path("incidents/templates/incidents/base.html")
+CSS_PATH = Path("incidents/static/incidents/css/style.css")
 
-# Правильное содержимое start.sh
-CORRECT_START_SH = """#!/bin/bash
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
-python manage.py create_superuser_if_none
-gunicorn crime_komi.wsgi
-"""
+def backup_file(path):
+    if path.exists():
+        import shutil
+        bak = path.with_suffix(path.suffix + ".togglebak")
+        shutil.copy2(path, bak)
+        print(f"Резервная копия: {bak.name}")
 
-# 1. Полностью удаляем старый start.sh и все его резервные копии
-start_path = PROJECT_DIR / "start.sh"
-if start_path.exists():
-    os.remove(start_path)
-    print("🗑️ Удалён старый start.sh")
-for bak in PROJECT_DIR.glob("start.sh*"):
-    if bak.name != "start.sh":
-        os.remove(bak)
-        print(f"🗑️ Удалён {bak.name}")
-
-# 2. Создаём новый start.sh с правильным содержимым
-with open(start_path, "w", encoding="utf-8", newline="\n") as f:
-    f.write(CORRECT_START_SH)
-print("✅ Создан новый start.sh")
-
-# 3. Удаляем все временные скрипты, которые могли содержать конфликты
-temp_scripts = [
-    "prepare_for_railway_final.py",
-    "fix_start_sh_conflict.py",
-    "apply_mobile_fixes.py",
-    "fix_all_and_push.py",
-    "final_fix_and_push.py",
-    "fix_all_conflicts_and_errors.py",
-    "emergency_fix_start_sh.py",  # удалит сам себя после выполнения
-]
-for script in temp_scripts:
-    script_path = PROJECT_DIR / script
-    if script_path.exists():
-        os.remove(script_path)
-        print(f"🗑️ Удалён {script}")
-
-# 4. Проверяем, что в settings.py нет конфликтов
-settings_path = PROJECT_DIR / "crime_komi" / "settings.py"
-if settings_path.exists():
-    with open(settings_path, "r", encoding="utf-8") as f:
+# 1. Обновляем base.html: одна кнопка-переключатель
+if BASE_HTML.exists():
+    backup_file(BASE_HTML)
+    with open(BASE_HTML, "r", encoding="utf-8") as f:
         content = f.read()
-    if "<<<<<<< HEAD" in content:
-        # Удаляем маркеры конфликта
-        lines = content.splitlines()
-        new_lines = []
-        skip = False
-        for line in lines:
-            if line.startswith("<<<<<<< HEAD"):
-                skip = True
-                continue
-            if skip and line.startswith("======="):
-                skip = False
-                continue
-            if not skip and not line.startswith(">>>>>>>"):
-                new_lines.append(line)
-        clean_content = "\n".join(new_lines)
-        with open(settings_path, "w", encoding="utf-8") as f:
-            f.write(clean_content)
-        print("✅ Исправлены конфликты в settings.py")
+    
+    # Удаляем все старые кнопки (show и close)
+    content = re.sub(r'<button class="show-map-btn".*?</button>', '', content, flags=re.DOTALL)
+    content = re.sub(r'<button class="close-map-btn".*?</button>', '', content, flags=re.DOTALL)
+    
+    # Добавляем одну кнопку-переключатель в нужное место (перед map-container)
+    toggle_button = '<button class="toggle-map-btn" id="toggleMapBtn">📱 Показать карту</button>\n'
+    if '<div class="map-container">' in content:
+        content = content.replace('<div class="map-container">', toggle_button + '<div class="map-container">')
+    
+    # Добавляем новый скрипт для toggle
+    script = '''
+<script>
+    (function() {
+        var mapContainer = document.querySelector('.map-container');
+        var toggleBtn = document.getElementById('toggleMapBtn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                if (mapContainer.classList.contains('active')) {
+                    mapContainer.classList.remove('active');
+                    toggleBtn.innerHTML = "📱 Показать карту";
+                } else {
+                    mapContainer.classList.add('active');
+                    toggleBtn.innerHTML = "✕ Закрыть карту";
+                    if (window.map) { setTimeout(function() { window.map.invalidateSize(); }, 100); }
+                }
+            });
+        }
+    })();
+</script>
+'''
+    if '</body>' in content:
+        content = content.replace('</body>', script + '\n</body>')
+    
+    with open(BASE_HTML, "w", encoding="utf-8") as f:
+        f.write(content)
+    print("✅ base.html обновлён: одна кнопка-переключатель")
 
-# 5. Закоммитить и запушить
-import subprocess
-def run(cmd):
-    print(f">>> {cmd}")
-    subprocess.run(cmd, shell=True, cwd=PROJECT_DIR)
+# 2. Обновляем CSS: убираем лишние стили для close-btn, добавляем для toggle
+if CSS_PATH.exists():
+    backup_file(CSS_PATH)
+    with open(CSS_PATH, "r", encoding="utf-8") as f:
+        css = f.read()
+    
+    # Удаляем стили для .close-map-btn, добавим .toggle-map-btn
+    css = re.sub(r'\.close-map-btn\s*\{[^}]*\}', '', css, flags=re.DOTALL)
+    # Добавим стили для toggle кнопки
+    toggle_css = """
+.toggle-map-btn {
+    display: block;
+    width: 100%;
+    background: #c0392b;
+    color: white;
+    border: none;
+    border-radius: 40px;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+@media (min-width: 769px) {
+    .toggle-map-btn {
+        display: none;
+    }
+}
+"""
+    if '.toggle-map-btn' not in css:
+        css += toggle_css
+    else:
+        css = re.sub(r'\.toggle-map-btn\s*\{[^}]*\}', toggle_css, css, flags=re.DOTALL)
+    
+    with open(CSS_PATH, "w", encoding="utf-8") as f:
+        f.write(css)
+    print("✅ CSS обновлён: одна кнопка-переключатель")
 
-run("git add .")
-run('git commit -m "Emergency fix: correct start.sh, remove conflicts"')
-run("git push origin main")
-
-print("\n✅ Готово! Теперь перезапустите деплой на Railway.")
+print("\n🎉 Готово! Теперь карта открывается и закрывается одной кнопкой.")
+print("Выполните команды для отправки на GitHub:")
+print("git add .")
+print('git commit -m "Toggle map button: one button shows/hides map"')
+print("git push origin main --force-with-lease")
