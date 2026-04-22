@@ -243,23 +243,10 @@ input, select, textarea {
         margin-top: 10px;
     }
     
-    .show-map-btn {
-        display: block;
-        width: 100%;
-        background: #c0392b;
-        color: white;
-        border: none;
-        border-radius: 40px;
-        padding: 10px;
-        margin-top: 10px;
-        font-size: 1rem;
-        cursor: pointer;
-    }
+    
 }
 @media (min-width: 769px) {
-    .show-map-btn {
-        display: none;
-    }
+    
     
     .map-container {
         display: block !important;
@@ -286,23 +273,10 @@ input, select, textarea {
         margin-top: 10px;
     }
     
-    .show-map-btn {
-        display: block;
-        width: 100%;
-        background: #c0392b;
-        color: white;
-        border: none;
-        border-radius: 40px;
-        padding: 10px;
-        margin-top: 10px;
-        font-size: 1rem;
-        cursor: pointer;
-    }
+    
 }
 @media (min-width: 769px) {
-    .show-map-btn {
-        display: none;
-    }
+    
     
     .map-container {
         display: block !important;
@@ -329,28 +303,16 @@ input, select, textarea {
         margin-top: 10px;
     }
     
-    .show-map-btn {
-        display: block;
-        width: 100%;
-        background: #c0392b;
-        color: white;
-        border: none;
-        border-radius: 40px;
-        padding: 10px;
-        margin-top: 10px;
-        font-size: 1rem;
-        cursor: pointer;
-    }
+    
 }
 @media (min-width: 769px) {
-    .show-map-btn {
-        display: none;
-    }
+    
     
     .map-container {
         display: block !important;
     }
 }
+
 
 .toggle-map-btn {
     display: block;
@@ -360,7 +322,7 @@ input, select, textarea {
     border: none;
     border-radius: 40px;
     padding: 10px;
-    margin-top: 10px;
+    margin-top: 20px;
     font-size: 1rem;
     cursor: pointer;
 }
@@ -368,4 +330,26 @@ input, select, textarea {
     .toggle-map-btn {
         display: none;
     }
+}
+
+@media (min-width: 769px) {
+    
+.toggle-map-btn {
+    display: block;
+    width: 100%;
+    background: #c0392b;
+    color: white;
+    border: none;
+    border-radius: 40px;
+    padding: 10px;
+    margin-top: 20px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+@media (min-width: 769px) {
+    .toggle-map-btn {
+        display: none;
+    }
+}
+
 }
