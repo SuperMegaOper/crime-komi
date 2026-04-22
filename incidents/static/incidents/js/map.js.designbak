@@ -1,0 +1,115 @@
+let map;
+let markersLayer;
+let allMarkers = [];
+let currentFilter = "all";
+
+const typeColors = {
+    "Кража": "#e74c3c",
+    "Грабеж": "#f39c12",
+    "Мошенничество": "#3498db",
+    "Наркотики": "#9b59b6",
+    "ДТП": "#1abc9c",
+    "Хулиганство": "#e67e22"
+};
+
+function initMap(incidentsData) {
+    map = L.map('map').setView([63.5, 55.5], 6.5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OSM & CartoDB',
+        maxZoom: 13
+    }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+    buildMarkers(incidentsData);
+    applyFilter();
+}
+
+function buildMarkers(incidentsData) {
+    markersLayer.clearLayers();
+    allMarkers = [];
+    incidentsData.forEach(inc => {
+        const color = typeColors[inc.type] || "#ffffff";
+        const customIcon = L.divIcon({
+            html: `<div style="background-color:${color}; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:0 2px 6px black;"><i class="fas fa-exclamation-triangle" style="color:white; font-size:12px;"></i></div>`,
+            iconSize: [24, 24],
+            className: 'custom-marker'
+        });
+        const marker = L.marker([inc.lat, inc.lng], { icon: customIcon });
+        marker.bindPopup(`
+            <b>${inc.title}</b><br>
+            <span style="color:${color}">${inc.type}</span><br>
+            📍 ${inc.place}<br>
+            📅 ${inc.date}<br>
+            📝 ${inc.desc}<br>
+            <small>Источник: данные МВД</small>
+        `);
+        marker.type = inc.type;
+        marker.id = inc.id;
+        marker.incidentData = inc;
+        allMarkers.push(marker);
+    });
+}
+
+function applyFilter() {
+    markersLayer.clearLayers();
+    const filtered = allMarkers.filter(m => currentFilter === "all" || m.type === currentFilter);
+    filtered.forEach(m => markersLayer.addLayer(m));
+    updateIncidentList(filtered.map(m => m.incidentData));
+}
+
+function updateIncidentList(incidents) {
+    const listDiv = document.getElementById('incidentList');
+    if (!incidents.length) {
+        listDiv.innerHTML = '<div style="text-align:center; padding:10px;">Нет происшествий по фильтру</div>';
+        return;
+    }
+    listDiv.innerHTML = '';
+    incidents.forEach(inc => {
+        const item = document.createElement('div');
+        item.className = 'incident-item';
+        item.style.borderLeftColor = typeColors[inc.type] || '#aaa';
+        const year = inc.date.split('-')[0];
+        item.innerHTML = `
+            <div><span style="background:${typeColors[inc.type]}30; color:${typeColors[inc.type]}; padding:2px 8px; border-radius:20px;">${inc.type}</span> <strong>${inc.title}</strong> <span style="background:#2c3e50; border-radius:12px; padding:2px 8px;">${year}</span></div>
+            <div style="font-size:0.75rem; color:#b9c2da;"><i class="fas fa-map-pin"></i> ${inc.place} • ${inc.date}</div>
+            <div style="font-size:0.7rem;">${inc.desc.substring(0, 70)}</div>
+        `;
+        item.addEventListener('click', () => {
+            const marker = allMarkers.find(m => m.id === inc.id);
+            if (marker) { map.setView(marker.getLatLng(), 12); marker.openPopup(); }
+        });
+        listDiv.appendChild(item);
+    });
+}
+
+function initFilters() {
+    const btns = document.querySelectorAll('.filter-btn');
+    btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.getAttribute('data-type');
+            applyFilter();
+        });
+    });
+}
+
+function loadAnonymousReports(reportsData) {
+    const container = document.getElementById('reportsContainer');
+    if (!reportsData.length) {
+        container.innerHTML = '<div style="color:#7f8c8d; text-align:center;">Нет обращений. Будьте первым!</div>';
+        return;
+    }
+    container.innerHTML = '';
+    reportsData.forEach(report => {
+        const div = document.createElement('div');
+        div.className = 'report-item';
+        const dateStr = new Date(report.createdAt).toLocaleString();
+        div.innerHTML = `
+            <div><i class="fas fa-tag"></i> ${report.type}</div>
+            <div><i class="fas fa-location-dot"></i> ${report.place || 'не указано'}</div>
+            <div><i class="fas fa-comment"></i> ${report.description.substring(0, 70)}</div>
+            <div style="font-size:0.6rem; color:#aaa;"><i class="far fa-clock"></i> ${dateStr}</div>
+        `;
+        container.appendChild(div);
+    });
+}
