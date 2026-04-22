@@ -1,21 +1,16 @@
 import os
-import shutil
+import re
 import subprocess
-import sys
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.absolute()
-APP_NAME = "incidents"
-MANAGEMENT_DIR = PROJECT_DIR / APP_NAME / "management"
-COMMANDS_DIR = MANAGEMENT_DIR / "commands"
 SETTINGS_FILE = PROJECT_DIR / "crime_komi" / "settings.py"
-REQUIREMENTS_FILE = PROJECT_DIR / "requirements.txt"
-START_SH_FILE = PROJECT_DIR / "start.sh"
-GITIGNORE_FILE = PROJECT_DIR / ".gitignore"
+START_SH = PROJECT_DIR / "start.sh"
 
 def backup_file(path):
     if path.exists():
-        bak = path.with_suffix(path.suffix + ".railwayprep")
+        import shutil
+        bak = path.with_suffix(path.suffix + ".authfix")
         shutil.copy2(path, bak)
         print(f"Резервная копия: {bak.name}")
 
@@ -28,154 +23,149 @@ def run_cmd(cmd):
         print(result.stdout)
     return result
 
-print("🚀 Начинаем финальную подготовку проекта для Railway...")
+print("🔧 Исправляем проблемы с авторизацией на Railway...")
 
-# 1. Создаём структуру management/commands
-COMMANDS_DIR.mkdir(parents=True, exist_ok=True)
-(COMMANDS_DIR.parent / "__init__.py").touch(exist_ok=True)
-(COMMANDS_DIR / "__init__.py").touch(exist_ok=True)
-
-# 2. Создаём файл команды create_superuser_if_none.py
-command_content = '''from django.core.management.base import BaseCommand
-from django.contrib.auth import get_user_model
-import os
-
-User = get_user_model()
-
-class Command(BaseCommand):
-    help = 'Создаёт суперпользователя, если он не существует'
-
-    def handle(self, *args, **options):
-        username = os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin')
-        email = os.getenv('DJANGO_SUPERUSER_EMAIL', 'admin@example.com')
-        password = os.getenv('DJANGO_SUPERUSER_PASSWORD', 'defaultpassword')
-
-        if not User.objects.filter(username=username).exists():
-            User.objects.create_superuser(username, email, password)
-            self.stdout.write(self.style.SUCCESS(f'Суперпользователь "{username}" успешно создан!'))
-        else:
-            self.stdout.write(self.style.WARNING(f'Суперпользователь "{username}" уже существует.'))
-'''
-command_file = COMMANDS_DIR / "create_superuser_if_none.py"
-with open(command_file, "w", encoding="utf-8") as f:
-    f.write(command_content)
-print("✅ Создан файл команды: incidents/management/commands/create_superuser_if_none.py")
-
-# 3. Создаём или обновляем start.sh
-start_content = '''#!/bin/bash
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
-python manage.py create_superuser_if_none
-gunicorn crime_komi.wsgi
-'''
-if START_SH_FILE.exists():
-    with open(START_SH_FILE, "r") as f:
-        existing = f.read()
-    if "create_superuser_if_none" not in existing:
-        backup_file(START_SH_FILE)
-        # Добавляем команду перед gunicorn
-        lines = existing.splitlines()
-        new_lines = []
-        for line in lines:
-            if "gunicorn" in line and "create_superuser_if_none" not in "\n".join(new_lines):
-                new_lines.append("python manage.py create_superuser_if_none")
-            new_lines.append(line)
-        with open(START_SH_FILE, "w") as f:
-            f.write("\n".join(new_lines))
-        print("✅ Обновлён start.sh (добавлена команда create_superuser_if_none)")
-    else:
-        print("✅ start.sh уже содержит команду create_superuser_if_none")
-else:
-    with open(START_SH_FILE, "w") as f:
-        f.write(start_content)
-    print("✅ Создан start.sh")
-
-# 4. Добавляем dj-database-url в requirements.txt
-if REQUIREMENTS_FILE.exists():
-    with open(REQUIREMENTS_FILE, "r") as f:
-        req = f.read()
-    if "dj-database-url" not in req:
-        backup_file(REQUIREMENTS_FILE)
-        with open(REQUIREMENTS_FILE, "a") as f:
-            f.write("\ndj-database-url==2.2.0\n")
-        print("✅ Добавлен dj-database-url в requirements.txt")
-    else:
-        print("✅ dj-database-url уже есть в requirements.txt")
-else:
-    print("⚠️ requirements.txt не найден, создаём...")
-    with open(REQUIREMENTS_FILE, "w") as f:
-        f.write("dj-database-url==2.2.0\n")
-    print("✅ Создан requirements.txt с dj-database-url")
-
-# 5. Обновляем settings.py
+# 1. Обновляем settings.py
 if SETTINGS_FILE.exists():
     backup_file(SETTINGS_FILE)
     with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
         content = f.read()
-    # Добавляем import dj_database_url
-    if "import dj_database_url" not in content:
-        content = content.replace("import os\n", "import os\nimport dj_database_url\n")
-    # Заменяем DATABASES на dj_database_url.config
-    if "dj_database_url.config" not in content:
-        import re
-        pattern = r"DATABASES\s*=\s*\{[^}]+\}"
-        new_db = "DATABASES = {\n    'default': dj_database_url.config(\n        default='sqlite:///db.sqlite3',\n        conn_max_age=600,\n        conn_health_checks=True,\n    )\n}"
-        content = re.sub(pattern, new_db, content, flags=re.DOTALL)
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            f.write(content)
-        print("✅ Обновлён settings.py (DATABASES через dj_database_url)")
+
+    # Добавляем импорт os, если нет
+    if "import os" not in content:
+        content = "import os\n" + content
+
+    # Добавляем ALLOWED_HOSTS с поддержкой Railway
+    if "ALLOWED_HOSTS" in content:
+        # Заменяем существующий ALLOWED_HOSTS
+        content = re.sub(
+            r"ALLOWED_HOSTS\s*=\s*\[.*?\]",
+            "ALLOWED_HOSTS = ['*']",
+            content,
+            flags=re.DOTALL
+        )
     else:
-        print("✅ settings.py уже настроен")
+        content += "\nALLOWED_HOSTS = ['*']\n"
+
+    # Добавляем CSRF_TRUSTED_ORIGINS для Railway
+    csrf_trusted = '''
+# Доверенные источники для CSRF (для Railway)
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.up.railway.app',
+    'http://*.up.railway.app',
+    'https://*.railway.app',
+]
+'''
+    if "CSRF_TRUSTED_ORIGINS" not in content:
+        content += csrf_trusted
+    else:
+        content = re.sub(
+            r"CSRF_TRUSTED_ORIGINS\s*=\s*\[.*?\]",
+            csrf_trusted.strip(),
+            content,
+            flags=re.DOTALL
+        )
+
+    # Добавляем настройки для безопасных сессий (опционально)
+    if "SESSION_COOKIE_SECURE" not in content:
+        content += "\n# Для HTTPS на Railway\nSESSION_COOKIE_SECURE = True\nCSRF_COOKIE_SECURE = True\nSECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')\n"
+
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        f.write(content)
+    print("✅ settings.py обновлён (ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, безопасность).")
 else:
     print("❌ settings.py не найден")
 
-# 6. Обновляем .gitignore
-if GITIGNORE_FILE.exists():
-    with open(GITIGNORE_FILE, "r") as f:
-        gitignore = f.read()
-    if "staticfiles/" not in gitignore:
-        with open(GITIGNORE_FILE, "a") as f:
-            f.write("\nstaticfiles/\n")
-        print("✅ Добавлена папка staticfiles/ в .gitignore")
+# 2. Добавляем автоматическое создание суперпользователя в любом случае через сигнал в models.py
+models_path = PROJECT_DIR / "incidents" / "models.py"
+if models_path.exists():
+    backup_file(models_path)
+    with open(models_path, "r", encoding="utf-8") as f:
+        models_content = f.read()
+    # Проверяем, есть ли уже сигнал для создания суперпользователя
+    if "create_superuser_if_none" not in models_content:
+        # Добавляем функцию в конец файла
+        auto_superuser = '''
+
+# Автоматическое создание суперпользователя из переменных окружения (для Railway)
+import os
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+if not User.objects.filter(is_superuser=True).exists():
+    username = os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin')
+    email = os.getenv('DJANGO_SUPERUSER_EMAIL', 'admin@example.com')
+    password = os.getenv('DJANGO_SUPERUSER_PASSWORD')
+    if password:
+        if not User.objects.filter(username=username).exists():
+            User.objects.create_superuser(username, email, password)
+            print(f'✅ Автоматически создан суперпользователь: {username}')
+        else:
+            print(f'⚠️ Пользователь {username} уже существует')
     else:
-        print("✅ .gitignore уже содержит staticfiles/")
-else:
-    print("⚠️ .gitignore не найден, создаём...")
-    with open(GITIGNORE_FILE, "w") as f:
-        f.write("venv/\n__pycache__/\n*.pyc\n*.log\n.env\nstaticfiles/\nmedia/\ndb.sqlite3\n")
-    print("✅ Создан .gitignore")
-
-# 7. Обновляем .env.example
-env_example = '''# Переменные окружения для Railway
-# База данных (автоматически добавляется при создании PostgreSQL)
-DATABASE_URL=postgresql://...
-
-# Суперпользователь (создаётся автоматически при запуске)
-DJANGO_SUPERUSER_USERNAME=admin
-DJANGO_SUPERUSER_EMAIL=admin@example.com
-DJANGO_SUPERUSER_PASSWORD=very_secret_password
-
-# Секретный ключ Django (сгенерируйте новый)
-SECRET_KEY=django-insecure-your-secret-key-here
+        print('⚠️ Не задан пароль суперпользователя (DJANGO_SUPERUSER_PASSWORD)')
 '''
-env_example_path = PROJECT_DIR / ".env.example"
-with open(env_example_path, "w") as f:
-    f.write(env_example)
-print("✅ Обновлён .env.example с примерами переменных")
+        models_content += auto_superuser
+        with open(models_path, "w", encoding="utf-8") as f:
+            f.write(models_content)
+        print("✅ Добавлен автоматический создатель суперпользователя в models.py")
+    else:
+        print("✅ Автоматическое создание суперпользователя уже есть в models.py")
+else:
+    print("❌ models.py не найден")
 
-# 8. Коммит и пуш в GitHub
+# 3. Обновляем start.sh для вывода отладочной информации
+if START_SH.exists():
+    backup_file(START_SH)
+    with open(START_SH, "r") as f:
+        start_content = f.read()
+    # Добавляем проверку переменных окружения
+    debug_commands = '''
+echo "=== Проверка переменных окружения ==="
+echo "DJANGO_SUPERUSER_USERNAME: $DJANGO_SUPERUSER_USERNAME"
+echo "DJANGO_SUPERUSER_EMAIL: $DJANGO_SUPERUSER_EMAIL"
+echo "DJANGO_SUPERUSER_PASSWORD: [скрыто]"
+echo "DATABASE_URL: ${DATABASE_URL:0:50}..."
+echo "======================================"
+'''
+    if "Проверка переменных окружения" not in start_content:
+        start_content = start_content.replace("#!/bin/bash", "#!/bin/bash\n\n" + debug_commands)
+        with open(START_SH, "w") as f:
+            f.write(start_content)
+        print("✅ Добавлена отладочная информация в start.sh")
+    else:
+        print("✅ Отладка уже есть в start.sh")
+else:
+    print("⚠️ start.sh не найден, создаём...")
+    with open(START_SH, "w") as f:
+        f.write('''#!/bin/bash
+echo "=== Проверка переменных окружения ==="
+echo "DJANGO_SUPERUSER_USERNAME: $DJANGO_SUPERUSER_USERNAME"
+echo "DJANGO_SUPERUSER_EMAIL: $DJANGO_SUPERUSER_EMAIL"
+echo "DATABASE_URL: ${DATABASE_URL:0:50}..."
+echo "======================================"
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+python manage.py create_superuser_if_none
+gunicorn crime_komi.wsgi
+''')
+    print("✅ Создан start.sh с отладкой")
+
+# 4. Коммит и пуш
 print("\n📦 Отправка изменений в GitHub...")
 run_cmd("git add .")
-run_cmd('git commit -m "Final Railway preparation: superuser auto-creation, start.sh, dj-database-url, settings update"')
+run_cmd('git commit -m "Fix auth: CSRF_TRUSTED_ORIGINS, auto superuser, debug in start.sh"')
 run_cmd("git push origin main")
 
-print("\n🎉 Скрипт завершён! Теперь сделайте следующее:")
-print("1. На Railway перейдите в ваш проект → веб-сервис → вкладка Variables.")
-print("2. Добавьте переменные окружения:")
-print("   - DJANGO_SUPERUSER_USERNAME (например, admin)")
-print("   - DJANGO_SUPERUSER_EMAIL (ваш email)")
+print("\n🎉 Готово! Теперь на Railway:")
+print("1. Перезапустите деплой (Deploy → Deploy Now).")
+print("2. В логах (Logs) вы увидите отладочную информацию и процесс создания суперпользователя.")
+print("3. Обязательно добавьте переменную CSRF_TRUSTED_ORIGINS? Нет, она уже в коде.")
+print("4. Проверьте, что в Variables есть:")
+print("   - DJANGO_SUPERUSER_USERNAME (ваш логин)")
+print("   - DJANGO_SUPERUSER_EMAIL")
 print("   - DJANGO_SUPERUSER_PASSWORD (надёжный пароль)")
-print("   - SECRET_KEY (сгенерируйте: https://djecrety.ir/ или командой python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())')")
-print("3. Убедитесь, что переменная DATABASE_URL присутствует (должна появиться после создания базы данных). Если нет, добавьте её через Reference → выберите вашу базу PostgreSQL → DATABASE_URL.")
-print("4. Перезапустите деплой: Deploy → Deploy Now.")
-print("5. После деплоя суперпользователь создастся автоматически, и вы сможете войти в админку.")
+print("   - SECRET_KEY (сгенерируйте)")
+print("   - DATABASE_URL (должна быть автоматически от базы данных)")
+print("5. После перезапуска попробуйте войти в админку /admin")
+print("6. Регистрация новых пользователей должна работать, так как CSRF_TRUSTED_ORIGINS теперь включает домены Railway.")
