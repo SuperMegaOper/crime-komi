@@ -99,3 +99,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # WhiteNoise static files storage
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://crime-komi-production.up.railway.app',
+]
