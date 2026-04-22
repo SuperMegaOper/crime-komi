@@ -3,9 +3,7 @@
 <html lang="ru">
 <head>
 <meta name="csrf-token" content="{{ csrf_token }}">
-
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Криминал Коми | Карта происшествий</title>
@@ -54,7 +52,6 @@
             background-clip: text;
             color: transparent;
         }
-    
     <style>
         .modal-content {
             background: #1a1e2a;
@@ -97,9 +94,7 @@
             margin-top: 5px;
         }
     </style>
-
 </style>
-
 <style id="modal-custom-styles">
     /* Общие стили для модальных окон */
     .modal-content {
@@ -179,7 +174,6 @@
         background: #3a4258;
     }
 </style>
-
 </head>
 <body>
 <div class="app">
@@ -189,14 +183,12 @@
             <p style="font-size:0.7rem; margin-top:2px;">Карта происшествий • на основе данных МВД</p>
         </div>
         <div class="nav-links">
-
     {% if user.is_staff %}
     <a href="{% url 'moderation' %}" id="notificationBell" style="position: relative; margin-right: 15px;">
         <i class="fas fa-bell" style="font-size: 1.2rem;"></i>
         <span id="notificationBadge" style="position: absolute; top: -8px; right: -10px; background: #e74c3c; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem;">0</span>
     </a>
     {% endif %}
-
                 <a href="{% url 'map' %}"><i class="fas fa-map"></i> Карта</a>
                 {% if user.is_authenticated %}
                     <a href="{% url 'add_incident' %}"><i class="fas fa-plus-circle"></i> Добавить отметку</a>
@@ -206,7 +198,6 @@
                     <button type="submit" style="background: none; border: none; color: #eef2ff; cursor: pointer;">
                         <i class="fas fa-sign-out-alt"></i> Выйти
                     </button>
-                <div class="anonymous-note"><a href="/password-reset/" data-bs-dismiss="modal" target="_blank">Забыли пароль?</a></div>
 </form>
                 {% else %}
                     <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal"><i class="fas fa-sign-in-alt"></i> Вход</a>
@@ -216,7 +207,9 @@
     </div>
     <div class="main-layout">
         {% block sidebar %}{% endblock %}
-        <div class="map-container">
+        <button class="show-map-btn" id="showMapBtn">📱 Показать карту</button>
+<button class="show-map-btn" id="showMapBtn">📱 Показать карту</button>
+<div class="map-container">
             {% block map %}{% endblock %}
         </div>
     </div>
@@ -224,7 +217,6 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="{% static 'incidents/js/map.js' %}"></script>
 {% block extra_js %}{% endblock %}
-
 <!-- Модальное окно профиля -->
 <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -252,7 +244,6 @@
     </div>
   </div>
 </div>
-
 <script>
     // Функция загрузки данных профиля
     function loadProfileData() {
@@ -278,7 +269,6 @@
             })
             .catch(error => console.error('Ошибка загрузки профиля:', error));
     }
-
     // При открытии модального окна загружаем данные
     const profileModal = document.getElementById('profileModal');
     if (profileModal) {
@@ -287,8 +277,6 @@
         });
     }
 </script>
-
-
 <!-- Модальное окно входа -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -309,14 +297,12 @@
           </div>
           <div id="loginError" class="error-message"></div>
           <button type="submit" class="submit-btn">Войти</button>
-        <div class="anonymous-note"><a href="/password-reset/" data-bs-dismiss="modal" target="_blank">Забыли пароль?</a></div>
 </form>
         <div class="anonymous-note" style="margin-top: 15px;">Нет аккаунта? <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal" data-bs-dismiss="modal">Зарегистрируйтесь</a></div>
       </div>
     </div>
   </div>
 </div>
-
 <!-- Модальное окно регистрации -->
 <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -345,15 +331,12 @@
           </div>
           <div id="regError" class="error-message"></div>
           <button type="submit" class="submit-btn">Зарегистрироваться</button>
-        <div class="anonymous-note"><a href="/password-reset/" data-bs-dismiss="modal" target="_blank">Забыли пароль?</a></div>
 </form>
         <div class="anonymous-note" style="margin-top: 15px;">Уже есть аккаунт? <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal" data-bs-dismiss="modal">Войдите</a></div>
       </div>
     </div>
   </div>
 </div>
-
-
 <script>
     // AJAX-вход
     $('#ajaxLoginForm').on('submit', function(e) {
@@ -412,18 +395,14 @@
         });
     });
 </script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-
     let notificationInterval;
     $(document).ready(function() {
         if (notificationInterval) clearInterval(notificationInterval);
         updateNotificationCount();
         notificationInterval = setInterval(updateNotificationCount, 30000);
     });
-
     });
     $('#ajaxRegisterForm').on('submit', function(e) {
         e.preventDefault();
@@ -445,7 +424,6 @@
     });
 });
 </script>
-
 <script>
     // Устанавливаем CSRF-токен для всех AJAX-запросов
     $.ajaxSetup({
@@ -456,8 +434,6 @@
         }
     });
 </script>
-
-
 <script>
 function updateNotificationCount() {
     $.get('/api/pending-count/', function(data) {
@@ -469,7 +445,14 @@ function updateNotificationCount() {
         }
     });
 }
-
+    let notificationInterval;
+    $(document).ready(function() {
+        if (notificationInterval) clearInterval(notificationInterval);
+        updateNotificationCount();
+        notificationInterval = setInterval(updateNotificationCount, 30000);
+    });
+</script>
+    let notificationInterval;
     let notificationInterval;
     $(document).ready(function() {
         if (notificationInterval) clearInterval(notificationInterval);
@@ -477,18 +460,50 @@ function updateNotificationCount() {
         notificationInterval = setInterval(updateNotificationCount, 30000);
     });
 
+<script>
+    (function() {
+        var mapContainer = document.querySelector('.map-container');
+        var showBtn = document.getElementById('showMapBtn');
+        var closeBtn = document.getElementById('closeMapBtn');
+        if (showBtn) {
+            showBtn.addEventListener('click', function() {
+                mapContainer.classList.add('active');
+                // принудительно обновляем размер карты, если она уже инициализирована
+                if (window.map) {
+                    setTimeout(function() { window.map.invalidateSize(); }, 100);
+                }
+            });
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                mapContainer.classList.remove('active');
+            });
+        }
+    })();
 </script>
 
 
-    let notificationInterval;
-    
-    let notificationInterval;
-    $(document).ready(function() {
-        if (notificationInterval) clearInterval(notificationInterval);
-        updateNotificationCount();
-        notificationInterval = setInterval(updateNotificationCount, 30000);
-    });
-
+<script>
+    (function() {
+        var mapContainer = document.querySelector('.map-container');
+        var showBtn = document.getElementById('showMapBtn');
+        var closeBtn = document.getElementById('closeMapBtn');
+        if (showBtn) {
+            showBtn.addEventListener('click', function() {
+                mapContainer.classList.add('active');
+                // принудительно обновляем размер карты, если она уже инициализирована
+                if (window.map) {
+                    setTimeout(function() { window.map.invalidateSize(); }, 100);
+                }
+            });
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                mapContainer.classList.remove('active');
+            });
+        }
+    })();
+</script>
 
 </body>
 </html>
