@@ -93,3 +93,22 @@ if not User.objects.filter(is_superuser=True).exists():
             print(f'⚠️ Пользователь {username} уже существует')
     else:
         print('⚠️ Не задан пароль суперпользователя (DJANGO_SUPERUSER_PASSWORD)')
+
+
+# Автоматическое создание суперпользователя из переменных окружения (для Railway)
+import os
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+if not User.objects.filter(is_superuser=True).exists():
+    username = os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin')
+    email = os.getenv('DJANGO_SUPERUSER_EMAIL', 'admin@example.com')
+    password = os.getenv('DJANGO_SUPERUSER_PASSWORD')
+    if password:
+        if not User.objects.filter(username=username).exists():
+            User.objects.create_superuser(username, email, password)
+            print(f'✅ Автоматически создан суперпользователь: {username}')
+        else:
+            print(f'⚠️ Пользователь {username} уже существует')
+    else:
+        print('⚠️ Не задан пароль суперпользователя (DJANGO_SUPERUSER_PASSWORD)')

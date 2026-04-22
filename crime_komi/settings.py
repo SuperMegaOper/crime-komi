@@ -101,6 +101,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Доверенные источники для CSRF (для Railway)
+# Доверенные источники для CSRF (для Railway)
 CSRF_TRUSTED_ORIGINS = [
     'https://*.up.railway.app',
     'http://*.up.railway.app',
