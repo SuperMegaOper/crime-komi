@@ -101,3 +101,5 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 CSRF_TRUSTED_ORIGINS = ['https://crime-komi-production.up.railway.app']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
