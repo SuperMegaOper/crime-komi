@@ -1,5 +1,4 @@
 import os
-import dj_database_url
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -24,7 +23,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -55,11 +53,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'crime_komi.wsgi.application'
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
+    }
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -96,6 +97,3 @@ LEAFLET_CONFIG = {
 }
 # Email settings for password reset
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# WhiteNoise static files storage
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

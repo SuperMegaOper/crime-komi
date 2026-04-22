@@ -1,3 +1,0 @@
-cd C:\crime_komi
-venv\Scripts\activate
-python manage.py runserver
