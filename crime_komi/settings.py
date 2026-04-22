@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-dev')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*', 'crime-komi-production.up.railway.app']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -102,11 +102,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Доверенные источники для CSRF (для Railway)
 # Доверенные источники для CSRF (для Railway)
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.up.railway.app',
-    'http://*.up.railway.app',
-    'https://*.railway.app',
-]
+CSRF_TRUSTED_ORIGINS = ['https://crime-komi-production.up.railway.app', 'http://crime-komi-production.up.railway.app']
 
 # Для HTTPS на Railway
 SESSION_COOKIE_SECURE = True
