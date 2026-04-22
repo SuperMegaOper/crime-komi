@@ -1,17 +1,66 @@
+import os
+import re
+import subprocess
 import shutil
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).parent.absolute()
+SETTINGS_FILE = PROJECT_DIR / "crime_komi" / "settings.py"
 BASE_HTML = PROJECT_DIR / "incidents" / "templates" / "incidents" / "base.html"
 CSS_PATH = PROJECT_DIR / "incidents" / "static" / "incidents" / "css" / "style.css"
 
+def run_cmd(cmd, cwd=None):
+    print(f"\n>>> {cmd}")
+    result = subprocess.run(cmd, shell=True, cwd=cwd or PROJECT_DIR, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(result.stderr)
+        return False
+    else:
+        print(result.stdout)
+        return True
+
 def backup_file(path):
     if path.exists():
-        bak = path.with_suffix(path.suffix + ".mobiletoggle")
+        bak = path.with_suffix(path.suffix + ".finalfix")
         shutil.copy2(path, bak)
-        print(f"Резервная копия: {bak.name}")
+        print(f"📁 Резервная копия: {bak.name}")
 
-# 1. Добавляем стили для мобильной версии (карта скрыта, кнопка видна)
+# ------------------------- 1. Решаем конфликт git -------------------------
+print("\n🔧 1. Разрешаем конфликты Git (pull --rebase)...")
+run_cmd("git fetch origin")
+run_cmd("git rebase origin/main")
+# Если конфликт остался, предложим вручную
+if (PROJECT_DIR / ".git" / "rebase-merge").exists() or (PROJECT_DIR / ".git" / "rebase-apply").exists():
+    print("\n⚠️ Обнаружен конфликт при rebase. Открывайте файлы и исправляйте.")
+    print("После исправления выполните: git add . && git rebase --continue")
+    input("Нажмите Enter, когда конфликты будут разрешены...")
+
+# ------------------------- 2. Обновляем settings.py (CSRF) -------------------------
+if SETTINGS_FILE.exists():
+    backup_file(SETTINGS_FILE)
+    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+        content = f.read()
+    railway_domain = "crime-komi-production.up.railway.app"
+    # ALLOWED_HOSTS
+    if "ALLOWED_HOSTS" in content:
+        content = re.sub(r"ALLOWED_HOSTS\s*=\s*\[.*?\]", f"ALLOWED_HOSTS = ['{railway_domain}', 'localhost', '127.0.0.1']", content, flags=re.DOTALL)
+    else:
+        content += f"\nALLOWED_HOSTS = ['{railway_domain}', 'localhost', '127.0.0.1']\n"
+    # CSRF_TRUSTED_ORIGINS
+    if "CSRF_TRUSTED_ORIGINS" in content:
+        content = re.sub(r"CSRF_TRUSTED_ORIGINS\s*=\s*\[.*?\]", f"CSRF_TRUSTED_ORIGINS = ['https://{railway_domain}']", content, flags=re.DOTALL)
+    else:
+        content += f"\nCSRF_TRUSTED_ORIGINS = ['https://{railway_domain}']\n"
+    # Дополнительные настройки безопасности для Railway
+    if "SECURE_PROXY_SSL_HEADER" not in content:
+        content += "\nSECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')\nUSE_X_FORWARDED_HOST = True\n"
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        f.write(content)
+    print("✅ settings.py обновлён (ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, SSL).")
+else:
+    print("❌ settings.py не найден")
+
+# ------------------------- 3. Мобильная адаптация карты (кнопка) -------------------------
 if CSS_PATH.exists():
     backup_file(CSS_PATH)
     with open(CSS_PATH, "a", encoding="utf-8") as f:
@@ -74,26 +123,18 @@ if CSS_PATH.exists():
 """)
     print("✅ Добавлены стили для мобильной карты (скрыта, открывается по кнопке)")
 
-# 2. Модифицируем base.html: добавляем кнопку и скрипт
 if BASE_HTML.exists():
     backup_file(BASE_HTML)
     with open(BASE_HTML, "r", encoding="utf-8") as f:
         content = f.read()
-    
-    # Находим блок .map-container и оборачиваем его в дополнительный div (или добавляем кнопку рядом)
-    # Добавляем кнопку перед map-container (или после)
-    button_html = '<button class="show-map-btn" id="showMapBtn">📱 Показать карту</button>\n'
-    close_button = '<button class="close-map-btn" id="closeMapBtn">✕ Закрыть</button>\n'
-    
-    # Вставляем кнопку после sidebar (или в нужное место)
-    if '<div class="map-container">' in content:
-        # Вставляем кнопку перед map-container
+    # Добавляем кнопку перед map-container
+    if '<div class="map-container">' in content and 'show-map-btn' not in content:
+        button_html = '<button class="show-map-btn" id="showMapBtn">📱 Показать карту</button>\n'
+        close_button = '<button class="close-map-btn" id="closeMapBtn">✕ Закрыть</button>\n'
         content = content.replace('<div class="map-container">', button_html + '<div class="map-container">')
-        # Вставляем кнопку закрытия внутри map-container
         content = content.replace('<div id="map"></div>', close_button + '<div id="map"></div>')
-    
-    # Добавляем JavaScript для переключения
-    js_script = """
+        # Добавляем скрипт
+        js_script = """
 <script>
     (function() {
         var mapContainer = document.querySelector('.map-container');
@@ -102,10 +143,7 @@ if BASE_HTML.exists():
         if (showBtn) {
             showBtn.addEventListener('click', function() {
                 mapContainer.classList.add('active');
-                // принудительно обновляем размер карты, если она уже инициализирована
-                if (window.map) {
-                    setTimeout(function() { window.map.invalidateSize(); }, 100);
-                }
+                if (window.map) { setTimeout(function() { window.map.invalidateSize(); }, 100); }
             });
         }
         if (closeBtn) {
@@ -116,14 +154,23 @@ if BASE_HTML.exists():
     })();
 </script>
 """
-    if '</body>' in content:
         content = content.replace('</body>', js_script + '\n</body>')
-    
-    with open(BASE_HTML, "w", encoding="utf-8") as f:
-        f.write(content)
-    print("✅ base.html обновлён: добавлена кнопка показа карты и скрипт")
+        with open(BASE_HTML, "w", encoding="utf-8") as f:
+            f.write(content)
+        print("✅ base.html обновлён (добавлена кнопка показа карты)")
+    else:
+        print("⚠️ base.html уже содержит кнопку или не найден блок map-container")
 else:
     print("❌ base.html не найден")
 
-print("\n🎉 Готово! Теперь на мобильных устройствах карта скрыта, появляется по кнопке «Показать карту».")
-print("Не забудьте закоммитить изменения и запушить на GitHub, затем перезапустить деплой на Railway.")
+# ------------------------- 4. Коммит и push -------------------------
+print("\n📦 4. Сохраняем изменения и отправляем в GitHub...")
+run_cmd("git add .")
+run_cmd('git commit -m "Fix CSRF, mobile map toggle, and settings for Railway"')
+run_cmd("git push --force-with-lease origin main")
+
+print("\n🎉 Скрипт завершён! Теперь:")
+print("1. Перейдите на Railway → ваш сервис 'crime-komi' → вкладка Deployments.")
+print("2. Нажмите на последний деплой → кнопку 'Redeploy'.")
+print("3. После перезапуска проверьте работу входа и мобильной карты.")
+print("4. Если вход всё ещё не работает, добавьте вручную в Variables: CSRF_TRUSTED_ORIGINS = https://crime-komi-production.up.railway.app (но это уже должно быть в коде).")
